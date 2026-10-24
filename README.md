@@ -29,7 +29,33 @@
 
 ```bash
 $ npm install
+$ cp .env.example .env
 ```
+
+Set your database connection and optional Observe credentials in `.env`. The
+same database variables are used by the application and TypeORM migrations.
+Set `AUTH_ACCESS_TOKEN_SECRET` to a randomly generated value of at least 32
+bytes (for example, `openssl rand -base64 32`) before starting the application.
+
+## Authentication
+
+- `POST /api/auth/signup` accepts `{ "email": "...", "password": "..." }` and
+  creates an account.
+- `POST /api/auth/signin` accepts the same body to sign in.
+- Signup and sign-in return a short-lived bearer access token and set a
+  30-day, HttpOnly refresh-session cookie.
+- `POST /api/auth/refresh` rotates the refresh cookie and returns a new access
+  token. Clients should call it when their access token expires and retry the
+  original request with the returned token.
+- `POST /api/auth/logout` revokes the refresh session and clears the cookie.
+
+Passwords must be 12–128 characters. Run the TypeORM migrations before using
+these endpoints.
+
+All `/api/todos` endpoints require the access token returned by signup or
+sign-in. Send it as `Authorization: Bearer <accessToken>`. Todo records are
+scoped to the authenticated account; records created before ownership was
+introduced remain unassigned and are not returned by account-scoped endpoints.
 
 ## Compile and run the project
 

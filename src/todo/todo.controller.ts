@@ -1,13 +1,18 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, ParseIntPipe, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, ParseIntPipe, Patch, Post, UseGuards } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
+  ApiBearerAuth,
   ApiCreatedResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import { AuthGuard } from '../Login/auth.guard.js';
+import { CurrentAccount } from '../Login/current-account.decorator.js';
+import type { AuthenticatedAccount } from '../Login/login.service.js';
 import { CreateTodoDto } from './dto/create-todo.dto.js';
 import { TodoResponseDto } from './dto/todo-response.dto.js';
 import { UpdateTodoDto } from './dto/update-todo.dto.js';
@@ -15,22 +20,29 @@ import { TodoService } from './todo.service.js';
 
 @Controller('api/todos')
 @ApiTags('todos')
+@ApiBearerAuth('access-token')
+@UseGuards(AuthGuard)
 export class TodoController {
   constructor(private readonly todoService: TodoService) {}
 
   @Get()
   @ApiOperation({ summary: 'Show the list of todos' })
   @ApiOkResponse({ type: TodoResponseDto, isArray: true })
-  findAll() {
-    return this.todoService.findAll();
+  @ApiUnauthorizedResponse({ description: 'Bearer access token is required' })
+  findAll(@CurrentAccount() account: AuthenticatedAccount) {
+    return this.todoService.findAll(account.id);
   }
 
   @Post()
   @ApiOperation({ summary: 'Create a to-do' })
   @ApiCreatedResponse({ type: TodoResponseDto })
   @ApiBadRequestResponse({ description: 'Invalid todo input' })
-  create(@Body() body: CreateTodoDto) {
-    return this.todoService.create(body);
+  @ApiUnauthorizedResponse({ description: 'Bearer access token is required' })
+  create(
+    @Body() body: CreateTodoDto,
+    @CurrentAccount() account: AuthenticatedAccount,
+  ) {
+    return this.todoService.create(body, account.id);
   }
 
   @Patch(':id')
@@ -38,8 +50,13 @@ export class TodoController {
   @ApiOkResponse({ type: TodoResponseDto })
   @ApiBadRequestResponse({ description: 'Invalid ID or todo input' })
   @ApiNotFoundResponse({ description: 'Todo not found' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() body: UpdateTodoDto) {
-    return this.todoService.update(id, body);
+  @ApiUnauthorizedResponse({ description: 'Bearer access token is required' })
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: UpdateTodoDto,
+    @CurrentAccount() account: AuthenticatedAccount,
+  ) {
+    return this.todoService.update(id, body, account.id);
   }
 
   @Delete(':id')
@@ -48,7 +65,11 @@ export class TodoController {
   @ApiNoContentResponse({ description: 'Todo deleted' })
   @ApiBadRequestResponse({ description: 'Invalid ID' })
   @ApiNotFoundResponse({ description: 'Todo not found' })
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.todoService.remove(id);
+  @ApiUnauthorizedResponse({ description: 'Bearer access token is required' })
+  remove(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentAccount() account: AuthenticatedAccount,
+  ) {
+    return this.todoService.remove(id, account.id);
   }
 }

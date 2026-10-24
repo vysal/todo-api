@@ -12,25 +12,25 @@ export class TodoService {
     private readonly todos: Repository<Todo>,
   ) {}
 
-  findAll(): Promise<Todo[]> {
-    return this.todos.find({ order: { id: 'ASC' } });
+  findAll(accountId: number): Promise<Todo[]> {
+    return this.todos.find({ where: { accountId }, order: { id: 'ASC' } });
   }
 
-  create(input: unknown): Promise<Todo> {
+  create(input: unknown, accountId: number): Promise<Todo> {
     const body = this.asRecord(input);
     this.assertOnlyKeys(body, ['title']);
     const title = this.readTitle(body.title);
-    return this.todos.save(this.todos.create({ title }));
+    return this.todos.save(this.todos.create({ title, accountId }));
   }
 
-  async update(id: number, input: unknown): Promise<Todo> {
+  async update(id: number, input: unknown, accountId: number): Promise<Todo> {
     const body = this.asRecord(input);
     this.assertOnlyKeys(body, ['title', 'status']);
     if (Object.keys(body).length === 0) {
       throw new BadRequestException('At least one of title or status is required');
     }
 
-    const todo = await this.todos.findOneBy({ id });
+    const todo = await this.todos.findOneBy({ id, accountId });
     if (!todo) {
       throw new NotFoundException(`Todo ${id} was not found`);
     }
@@ -47,8 +47,8 @@ export class TodoService {
     return this.todos.save(todo);
   }
 
-  async remove(id: number): Promise<void> {
-    const result = await this.todos.delete(id);
+  async remove(id: number, accountId: number): Promise<void> {
+    const result = await this.todos.delete({ id, accountId });
     if (!result.affected) {
       throw new NotFoundException(`Todo ${id} was not found`);
     }
